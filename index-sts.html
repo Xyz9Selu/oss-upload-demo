@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>阿里云OSS文件上传 - STS模式</title>
+</head>
+<body>
+  <h1>阿里云OSS文件上传 - STS模式</h1>
+  <input type="file" id="fileInput">
+  <button onclick="uploadFile()">上传文件</button>
+
+  <!-- 引入Axios库 -->
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <!-- 引入OSS SDK -->
+  <script src="https://gosspublic.alicdn.com/aliyun-oss-sdk-6.17.1.min.js"></script>
+
+  <script>
+    async function uploadFile() {
+      const fileInput = document.getElementById('fileInput');
+      const file = fileInput.files[0];
+
+      if (!file) {
+        alert('请选择要上传的文件');
+        return;
+      }
+
+      try {
+        // 从后端获取STS临时凭证
+        const res = await axios.get('http://localhost:3000/get-sts');
+        const creds = res.data;
+
+        // 创建OSS客户端实例
+        const client = new OSS({
+          region: creds.region,
+          accessKeyId: creds.AccessKeyId,
+          accessKeySecret: creds.AccessKeySecret,
+          stsToken: creds.SecurityToken,
+          bucket: creds.bucket
+        });
+
+        // 上传文件
+        const result = await client.put(file.name, file);
+
+        console.log('文件上传成功', result);
+        alert('文件上传成功，文件URL：' + result.url);
+      } catch (err) {
+        console.error('文件上传失败', err);
+        alert('文件上传失败');
+      }
+    }
+  </script>
+</body>
+</html>

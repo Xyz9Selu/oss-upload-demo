@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>阿里云 OSS 文件上传 - 签名直传模式</title>
+</head>
+<body>
+  <h1>阿里云 OSS 文件上传 - 签名直传模式</h1>
+  <input type="file" id="fileInput">
+  <button onclick="uploadFile()">上传文件</button>
+
+  <!-- 引入 Axios 库 -->
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+  <script>
+    async function uploadFile() {
+      const fileInput = document.getElementById('fileInput');
+      const file = fileInput.files[0];
+
+      if (!file) {
+        alert('请选择要上传的文件');
+        return;
+      }
+
+      try {
+        // 从后端获取上传策略和签名
+        const res = await axios.get('http://localhost:3000/get-policy');
+        const data = res.data;
+
+        // 构建表单数据
+        const formData = new FormData();
+        // 为了避免文件名冲突，这里可以加上时间戳或 UUID
+        const fileName = data.dir + Date.now() + '_' + file.name;
+        formData.append('key', fileName);
+        formData.append('policy', data.policy);
+        formData.append('OSSAccessKeyId', data.accessid);
+        formData.append('success_action_status', '200');
+        formData.append('signature', data.signature);
+        formData.append('file', file);
+        // 如果需要设置文件的 ACL 为公共读，可以添加以下字段
+        formData.append('x-oss-object-acl', 'public-read');
+
+        // 上传文件到 OSS
+        const uploadRes = await axios.post(data.host, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+
+        if (uploadRes.status === 200) {
+          // 构建文件的 URL
+          const fileUrl = data.host + '/' + fileName;
+          alert('文件上传成功，文件 URL：' + fileUrl);
+        } else {
+          alert('文件上传失败');
+        }
+      } catch (err) {
+        console.error('文件上传失败', err);
+        alert('文件上传失败');
+      }
+    }
+  </script>
+</body>
+</html>
